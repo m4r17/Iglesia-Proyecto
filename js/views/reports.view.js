@@ -9,7 +9,7 @@ App.Views.reports = {
         <div>
           <p class="eyebrow">RF-09 · Reportes</p>
           <h2>Reportes e informes</h2>
-          <p class="view-sub">Consulta reportes de miembros, asistencia, ministerios e ingresos. Exporta a CSV o genera un PDF mediante impresión.</p>
+          <p class="view-sub">Consulta reportes de miembros, asistencia, ministerios e ingresos. Exporta a Excel (.xlsx), CSV o PDF.</p>
         </div>
       </div>
 
@@ -19,13 +19,17 @@ App.Views.reports = {
         <div class="report-toolbar">
           <div class="report-filters" id="report-filters"></div>
           <div class="report-actions">
+            <button type="button" class="btn btn-ghost btn-sm" id="export-xlsx">
+              ${App.Icons.download()}
+              Exportar Excel
+            </button>
             <button type="button" class="btn btn-ghost btn-sm" id="export-csv">
               ${App.Icons.download()}
               Exportar CSV
             </button>
             <button type="button" class="btn btn-ghost btn-sm" id="print-report">
               ${App.Icons.printer()}
-              Imprimir / PDF
+              Exportar PDF
             </button>
           </div>
         </div>
@@ -41,6 +45,7 @@ App.Views.reports = {
     const filtersContainer = document.getElementById('report-filters');
     const content = document.getElementById('report-content');
     const csvButton = document.getElementById('export-csv');
+    const xlsxButton = document.getElementById('export-xlsx');
     const printButton = document.getElementById('print-report');
 
     const definitions = [
@@ -60,6 +65,7 @@ App.Views.reports = {
       filters: {
         membersStatus: 'all',
         attendanceEvent: '',
+        attendanceGroup: 'event',
         attendanceFrom: firstOfMonth,
         attendanceTo: today,
         ministryMonth: currentMonth,
@@ -196,6 +202,64 @@ App.Views.reports = {
         ? `${from ? `Desde ${App.Utils.formatDate(from)}` : 'Sin fecha inicial'} · ${to ? `Hasta ${App.Utils.formatDate(to)}` : 'Sin fecha final'}`
         : 'Todo el periodo';
 
+      const group = state.filters.attendanceGroup;
+      const summary = [
+        { label: 'Eventos registrados', value: String(records.length) },
+        { label: 'Presentes', value: String(present) },
+        { label: 'Ausentes', value: String(absent) },
+        { label: 'Promedio por evento', value: records.length ? String(Math.round((present / records.length) * 10) / 10) : '0' }
+      ];
+
+      if (group === 'week' || group === 'month') {
+        const buckets = new Map();
+
+        records.forEach((record) => {
+          const key = group === 'week'
+            ? App.Utils.toISODate(App.Utils.startOfWeek(record.fecha))
+            : String(record.fecha).slice(0, 7);
+          const bucket = buckets.get(key) || { present: 0, absent: 0, events: 0 };
+          bucket.present += App.Services.attendance.presentCount(record);
+          bucket.absent += App.Services.attendance.absentCount(record);
+          bucket.events += 1;
+          buckets.set(key, bucket);
+        });
+
+        const groupedRows = Array.from(buckets.keys()).sort().reverse().map((key) => {
+          const bucket = buckets.get(key);
+          const total = bucket.present + bucket.absent;
+          const label = group === 'week'
+            ? `${App.Utils.formatDate(key)} – ${App.Utils.formatDate(App.Utils.endOfWeek(key))}`
+            : App.Utils.monthLabel(key);
+
+          return [
+            label,
+            bucket.events,
+            bucket.present,
+            bucket.absent,
+            bucket.events ? Math.round((bucket.present / bucket.events) * 10) / 10 : 0,
+            total ? Math.round((bucket.present / total) * 100) : 0
+          ];
+        });
+
+        return {
+          title: group === 'week' ? 'Reporte semanal de asistencia' : 'Reporte mensual de asistencia',
+          subtitle: `${eventId ? eventName(eventId) : 'Todos los eventos'} · ${period}`,
+          columns: [
+            { label: group === 'week' ? 'Semana' : 'Mes', type: 'text' },
+            { label: 'Eventos', type: 'number', align: 'right' },
+            { label: 'Presentes', type: 'number', align: 'right' },
+            { label: 'Ausentes', type: 'number', align: 'right' },
+            { label: 'Promedio', type: 'number', align: 'right' },
+            { label: 'Asistencia', type: 'percent', align: 'right' }
+          ],
+          rows: groupedRows,
+          summary,
+          note: group === 'week'
+            ? 'Las semanas inician en lunes. El promedio corresponde a presentes por evento registrado.'
+            : 'El promedio corresponde a presentes por evento registrado en cada mes.'
+        };
+      }
+
       return {
         title: 'Reporte de asistencia por evento',
         subtitle: `${eventId ? eventName(eventId) : 'Todos los eventos'} · ${period}`,
@@ -208,12 +272,7 @@ App.Views.reports = {
           { label: 'Asistencia', type: 'percent', align: 'right' }
         ],
         rows,
-        summary: [
-          { label: 'Eventos registrados', value: String(records.length) },
-          { label: 'Presentes', value: String(present) },
-          { label: 'Ausentes', value: String(absent) },
-          { label: 'Promedio por evento', value: records.length ? String(Math.round((present / records.length) * 10) / 10) : '0' }
-        ],
+        summary,
         note: 'El porcentaje se calcula con los registros de asistencia guardados para cada evento y fecha.'
       };
     }
@@ -366,6 +425,16 @@ App.Views.reports = {
 
         filtersContainer.innerHTML = `
           <div class="field field-inline">
+            <label for="report-attendance-group">Agrupar</label>
+            <select id="report-attendance-group" data-filter="attendanceGroup">
+              ${optionsMarkup([
+                { value: 'event', label: 'Por evento' },
+                { value: 'week', label: 'Semanal' },
+                { value: 'month', label: 'Mensual' }
+              ], state.filters.attendanceGroup)}
+            </select>
+          </div>
+          <div class="field field-inline">
             <label for="report-attendance-event">Evento</label>
             <select id="report-attendance-event" data-filter="attendanceEvent">
               ${optionsMarkup([{ value: '', label: 'Todos los eventos' }, ...events], state.filters.attendanceEvent)}
@@ -379,6 +448,8 @@ App.Views.reports = {
             <label for="report-attendance-to">Hasta</label>
             <input type="date" id="report-attendance-to" data-filter="attendanceTo" value="${escape(state.filters.attendanceTo)}">
           </div>
+          <button type="button" class="btn btn-sm btn-ghost" data-preset="week">Semana actual</button>
+          <button type="button" class="btn btn-sm btn-ghost" data-preset="month">Mes actual</button>
           <button type="button" class="btn btn-sm btn-ghost" data-clear="attendanceFrom,attendanceTo">Todo el periodo</button>
         `;
         return;
@@ -473,6 +544,7 @@ App.Views.reports = {
 
       const hasRows = Boolean(currentReport && currentReport.rows.length);
       csvButton.disabled = !hasRows;
+      xlsxButton.disabled = !hasRows;
       printButton.disabled = !hasRows;
     }
 
@@ -509,6 +581,53 @@ App.Views.reports = {
 
       window.setTimeout(() => URL.revokeObjectURL(url), 800);
       App.UI.toast('Reporte exportado en CSV.');
+    }
+
+    function xlsxValue(value, column) {
+      if (value === null || value === undefined || value === '') return '';
+      if (column.type === 'money' || column.type === 'number') return Number(value);
+      if (column.type === 'percent') return `${value}%`;
+      return displayValue(value, column);
+    }
+
+    function exportXlsx() {
+      if (!currentReport || !currentReport.rows.length) return;
+
+      const church = App.Services.church.get();
+      const columns = currentReport.columns;
+      const moneyColumns = columns
+        .map((column, index) => (column.type === 'money' ? index : -1))
+        .filter((index) => index >= 0);
+
+      const rows = [
+        [currentReport.title],
+        [`${church.name} · ${currentReport.subtitle}`],
+        [`Generado el ${App.Utils.formatLongDate(App.Utils.todayISO())}`],
+        [],
+        columns.map((column) => column.label),
+        ...currentReport.rows.map((row) => columns.map((column, index) => xlsxValue(row[index], column))),
+        [],
+        ...currentReport.summary.map((item) => [item.label, item.value]),
+        [],
+        [currentReport.note]
+      ];
+
+      const blob = App.Xlsx.build(currentReport.title, rows, {
+        titleRows: 1,
+        headerRows: [4],
+        moneyColumns
+      });
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${slug(currentReport.title)}_${App.Utils.todayISO()}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      window.setTimeout(() => URL.revokeObjectURL(url), 800);
+      App.UI.toast('Reporte exportado en Excel.');
     }
 
     function printTable(report) {
@@ -602,6 +721,7 @@ App.Views.reports = {
       printWindow.document.close();
       printWindow.focus();
       window.setTimeout(() => printWindow.print(), 350);
+      App.UI.toast('En el diálogo de impresión elige «Guardar como PDF».');
     }
 
     tabsContainer.addEventListener('click', (event) => {
@@ -619,6 +739,24 @@ App.Views.reports = {
     });
 
     filtersContainer.addEventListener('click', (event) => {
+      const presetButton = event.target.closest('button[data-preset]');
+      if (presetButton) {
+        const todayISO = App.Utils.todayISO();
+        if (presetButton.dataset.preset === 'week') {
+          state.filters.attendanceFrom = App.Utils.toISODate(App.Utils.startOfWeek(todayISO));
+          state.filters.attendanceTo = App.Utils.toISODate(App.Utils.endOfWeek(todayISO));
+          state.filters.attendanceGroup = 'week';
+        } else {
+          const month = App.Utils.monthKey(todayISO);
+          const lastDay = new Date(Number(month.slice(0, 4)), Number(month.slice(5, 7)), 0).getDate();
+          state.filters.attendanceFrom = `${month}-01`;
+          state.filters.attendanceTo = `${month}-${App.Utils.pad2(lastDay)}`;
+          state.filters.attendanceGroup = 'month';
+        }
+        drawReport();
+        return;
+      }
+
       const clearButton = event.target.closest('button[data-clear]');
       if (!clearButton) return;
       clearButton.dataset.clear.split(',').forEach((key) => {
@@ -628,6 +766,7 @@ App.Views.reports = {
     });
 
     csvButton.addEventListener('click', exportCsv);
+    xlsxButton.addEventListener('click', exportXlsx);
     printButton.addEventListener('click', printReport);
 
     if (!reports.length) {
@@ -639,6 +778,7 @@ App.Views.reports = {
         App.Icons.chart()
       );
       csvButton.disabled = true;
+      xlsxButton.disabled = true;
       printButton.disabled = true;
       return;
     }

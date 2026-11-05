@@ -4,6 +4,8 @@ App.Views.members = {
   title: 'Miembros',
 
   render() {
+    const canManage = App.Auth.canManage('members');
+
     return `
       <div class="view-head">
         <div>
@@ -11,10 +13,12 @@ App.Views.members = {
           <h2>Miembros de la iglesia</h2>
           <p class="view-sub">Registra, consulta y actualiza la información de los miembros. Los registros se desactivan sin eliminarse.</p>
         </div>
-        <button type="button" class="btn btn-primary" id="new-member">
-          ${App.Icons.plus()}
-          Nuevo miembro
-        </button>
+        ${canManage ? `
+          <button type="button" class="btn btn-primary" id="new-member">
+            ${App.Icons.plus()}
+            Nuevo miembro
+          </button>
+        ` : ''}
       </div>
 
       <div class="card">
@@ -37,6 +41,7 @@ App.Views.members = {
 
   mount() {
     const state = { query: '', status: 'all' };
+    const canManage = App.Auth.canManage('members');
     const table = document.getElementById('members-table');
     const count = document.getElementById('member-count');
     const search = document.getElementById('member-search');
@@ -68,14 +73,14 @@ App.Views.members = {
           <td>${escape(App.Utils.formatDate(member.fechaIngreso))}</td>
           <td>${App.UI.statusBadge(member.estado)}</td>
           <td class="align-right">
-            <div class="row-actions">
+            ${canManage ? `<div class="row-actions">
               <button type="button" class="icon-btn" data-action="edit" data-id="${escape(member.id)}" aria-label="Editar" title="Editar">
                 ${App.Icons.edit()}
               </button>
               <button type="button" class="icon-btn ${isActive ? 'icon-btn-danger' : 'icon-btn-success'}" data-action="toggle" data-id="${escape(member.id)}" aria-label="${isActive ? 'Desactivar' : 'Reactivar'}" title="${isActive ? 'Desactivar' : 'Reactivar'}">
                 ${isActive ? App.Icons.x() : App.Icons.check()}
               </button>
-            </div>
+            </div>` : '<span class="muted">Solo consulta</span>'}
           </td>
         </tr>
       `;
@@ -189,11 +194,12 @@ App.Views.members = {
       draw();
     });
 
-    document.getElementById('new-member').addEventListener('click', () => openForm(null));
+    const newButton = document.getElementById('new-member');
+    if (newButton) newButton.addEventListener('click', () => openForm(null));
 
     table.addEventListener('click', (event) => {
       const button = event.target.closest('button[data-action]');
-      if (!button) return;
+      if (!button || !canManage) return;
 
       const member = App.Services.members.get(button.dataset.id);
       if (!member) return;

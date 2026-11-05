@@ -55,18 +55,43 @@ App.Views.events = {
     const today = new Date();
     let cursor = new Date(today.getFullYear(), today.getMonth(), 1);
 
-    function userOptions(selected) {
-      const users = App.Repositories.users.all();
-      const options = ['<option value="">Sin asignar</option>'];
+    function ownerPicker(selected) {
+      const chosen = new Set(
+        String(selected || '').split(',').map(App.Utils.normalize).filter(Boolean)
+      );
+      const seen = new Set();
+      const people = [];
 
-      users.forEach((user) => {
-        const isSelected = selected && App.Utils.normalize(selected) === App.Utils.normalize(user.nombre);
-        options.push(
-          `<option value="${escape(user.nombre)}" ${isSelected ? 'selected' : ''}>${escape(user.nombre)} · ${escape(App.Auth.roleLabel(user.rol))}</option>`
-        );
-      });
+      App.Repositories.users.all()
+        .filter((user) => user.estado !== 'inactivo')
+        .forEach((user) => people.push({ nombre: user.nombre, detalle: App.Auth.roleLabel(user.rol) }));
 
-      return options.join('');
+      App.Services.members.active()
+        .forEach((member) => people.push({ nombre: member.nombre, detalle: 'Miembro' }));
+
+      const rows = people
+        .filter((person) => {
+          const key = App.Utils.normalize(person.nombre);
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        })
+        .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
+        .map((person) => {
+          const isChecked = chosen.has(App.Utils.normalize(person.nombre));
+          return `
+            <label class="pick-row ${isChecked ? 'is-selected' : ''}">
+              <span class="avatar avatar-sm">${escape(App.Utils.initials(person.nombre))}</span>
+              <span class="att-name">
+                <strong>${escape(person.nombre)}</strong>
+                <span>${escape(person.detalle)}</span>
+              </span>
+              <input type="checkbox" class="pick-check" name="responsables" value="${escape(person.nombre)}" ${isChecked ? 'checked' : ''}>
+            </label>
+          `;
+        });
+
+      return rows.length ? rows.join('') : '<p class="muted">No hay usuarios ni miembros activos.</p>';
     }
 
     function openForm(eventItem, presetDate) {
@@ -79,7 +104,7 @@ App.Views.events = {
         `)
       ].join('');
 
-      App.UI.modal({
+      const modalForm = App.UI.modal({
         title: isEdit ? 'Editar evento' : 'Nuevo evento',
         submitLabel: isEdit ? 'Guardar cambios' : 'Crear evento',
         formHtml: `
@@ -112,10 +137,6 @@ App.Views.events = {
               <select id="event-ministry" name="ministerioId">${ministryOptions}</select>
             </div>
             <div class="field">
-              <label for="event-owner">Responsable</label>
-              <select id="event-owner" name="responsable">${userOptions(data.responsable)}</select>
-            </div>
-            <div class="field">
               <label for="event-status">Estado</label>
               <select id="event-status" name="estado">
                 <option value="programado" ${data.estado !== 'cancelado' ? 'selected' : ''}>Programado</option>
@@ -123,12 +144,18 @@ App.Views.events = {
               </select>
             </div>
             <div class="field field-full">
+              <span class="field-label">Responsables</span>
+              <div class="member-picker owner-picker" id="event-owners">${ownerPicker(data.responsable)}</div>
+              <span class="field-hint">Selecciona una o varias personas responsables del evento.</span>
+            </div>
+            <div class="field field-full">
               <label for="event-description">Descripción</label>
               <textarea id="event-description" name="descripcion" rows="3" maxlength="300" placeholder="Detalles del evento">${escape(data.descripcion || '')}</textarea>
             </div>
           </div>
         `,
-        onSubmit(formData) {
+        onSubmit(formData, form) {
+          formData.responsable = new FormData(form).getAll('responsables').join(', ');
           if (isEdit) {
             App.Services.events.update(eventItem.id, formData);
             App.UI.toast('Evento actualizado.');
@@ -138,6 +165,13 @@ App.Views.events = {
           }
           draw();
         }
+      });
+
+      modalForm.addEventListener('change', (event) => {
+        const checkbox = event.target.closest('input[name="responsables"]');
+        if (!checkbox) return;
+        const pickRow = checkbox.closest('.pick-row');
+        if (pickRow) pickRow.classList.toggle('is-selected', checkbox.checked);
       });
     }
 
