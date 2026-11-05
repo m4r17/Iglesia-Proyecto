@@ -21,6 +21,22 @@ App.Views.announcements = {
         ` : ''}
       </div>
 
+      <div class="grid grid-2">
+        <div class="card">
+          <div class="card-head">
+            <h3>Próximos eventos</h3>
+            ${App.Auth.can('events') ? '<a class="link" href="#/eventos">Ver calendario</a>' : ''}
+          </div>
+          <div id="announcement-events" class="event-list"></div>
+        </div>
+        <div class="card">
+          <div class="card-head">
+            <h3>Avisos importantes</h3>
+          </div>
+          <div id="announcement-important" class="event-list"></div>
+        </div>
+      </div>
+
       <div class="card">
         <div class="toolbar">
           <select id="announcement-filter" class="select-inline" aria-label="Filtrar comunicados">
@@ -89,7 +105,47 @@ App.Views.announcements = {
       `;
     }
 
+    function dateBadge(value) {
+      const date = App.Utils.parseDate(value);
+      return `
+        <div class="date-badge">
+          <strong>${date ? date.getDate() : '—'}</strong>
+          <small>${date ? date.toLocaleDateString('es-MX', { month: 'short' }) : ''}</small>
+        </div>
+      `;
+    }
+
+    function drawHighlights() {
+      const events = App.Services.events.upcoming(4);
+      const important = App.Services.announcements.latest(4, true);
+
+      document.getElementById('announcement-events').innerHTML = events.length
+        ? events.map((eventItem) => `
+            <div class="event-row">
+              ${dateBadge(eventItem.fecha)}
+              <div class="event-main">
+                <strong>${escape(eventItem.titulo)}</strong>
+                <span>${escape(eventItem.hora || '')} · ${escape(eventItem.lugar || 'Sin lugar')}</span>
+              </div>
+            </div>
+          `).join('')
+        : App.UI.empty('Sin eventos próximos', 'El calendario está libre por ahora.', App.Icons.events());
+
+      document.getElementById('announcement-important').innerHTML = important.length
+        ? important.map((announcement) => `
+            <div class="event-row">
+              ${dateBadge(announcement.fechaPublicacion)}
+              <div class="event-main">
+                <strong>${escape(announcement.titulo)}</strong>
+                <span>Publicado el ${escape(App.Utils.formatDate(announcement.fechaPublicacion))} · ${escape(announcement.autor || 'Administración')}</span>
+              </div>
+            </div>
+          `).join('')
+        : App.UI.empty('Sin avisos importantes', 'Marca un comunicado como importante para destacarlo.', App.Icons.star());
+    }
+
     function draw() {
+      drawHighlights();
       const list = filteredList();
       count.textContent = `${list.length} ${list.length === 1 ? 'comunicado' : 'comunicados'}`;
 

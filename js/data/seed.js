@@ -15,6 +15,7 @@ App.Seed = (function () {
       correo,
       passwordHash: App.Utils.hashPassword(password),
       rol,
+      estado: 'activo',
       creadoEn: new Date().toISOString()
     };
   }

@@ -4,6 +4,8 @@ App.Views.donations = {
   title: 'Donaciones',
 
   render() {
+    const canManage = App.Auth.canManage('donations');
+
     return `
       <div class="view-head">
         <div>
@@ -11,10 +13,12 @@ App.Views.donations = {
           <h2>Control de ingresos</h2>
           <p class="view-sub">Registra aportaciones, consulta ingresos por periodos y permite registros anónimos.</p>
         </div>
-        <button type="button" class="btn btn-primary" id="new-donation">
-          ${App.Icons.plus()}
-          Nueva aportación
-        </button>
+        ${canManage ? `
+          <button type="button" class="btn btn-primary" id="new-donation">
+            ${App.Icons.plus()}
+            Nueva aportación
+          </button>
+        ` : '<span class="badge badge-muted">Solo consulta</span>'}
       </div>
 
       <div class="grid grid-stats">
@@ -87,6 +91,7 @@ App.Views.donations = {
   mount() {
     const escape = App.Utils.escapeHtml;
     const state = { month: '', method: 'all' };
+    const canManage = App.Auth.canManage('donations');
 
     const tableContainer = document.getElementById('donations-table');
     const monthlyContainer = document.getElementById('don-monthly');
@@ -163,10 +168,10 @@ App.Views.donations = {
                   <td><span class="badge badge-blue">${escape(App.UI.methodLabel(donation.metodo))}</span></td>
                   <td class="align-right money">${escape(App.Utils.formatMoney(donation.monto))}</td>
                   <td class="align-right">
-                    <div class="row-actions">
+                    ${canManage ? `<div class="row-actions">
                       <button type="button" class="icon-btn" data-action="edit" data-id="${escape(donation.id)}" aria-label="Editar" title="Editar">${App.Icons.edit()}</button>
                       <button type="button" class="icon-btn icon-btn-danger" data-action="delete" data-id="${escape(donation.id)}" aria-label="Eliminar" title="Eliminar">${App.Icons.trash()}</button>
-                    </div>
+                    </div>` : '—'}
                   </td>
                 </tr>
               `).join('')}
@@ -366,11 +371,12 @@ App.Views.donations = {
       drawChart();
     });
 
-    document.getElementById('new-donation').addEventListener('click', () => openForm(null));
+    const newButton = document.getElementById('new-donation');
+    if (newButton) newButton.addEventListener('click', () => openForm(null));
 
     tableContainer.addEventListener('click', (event) => {
       const button = event.target.closest('button[data-action]');
-      if (!button) return;
+      if (!button || !canManage) return;
 
       const donation = App.Services.donations.get(button.dataset.id);
       if (!donation) return;

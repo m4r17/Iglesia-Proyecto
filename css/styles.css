@@ -2631,3 +2631,53 @@ svg {
     width: 100%;
   }
 }
+
+.recovery-code {
+  display: block;
+  margin: 0.5rem 0;
+  font-size: 1.5rem;
+  letter-spacing: 0.3em;
+  font-variant-numeric: tabular-nums;
+}
+
+.owner-picker {
+  max-height: 180px;
+}
+
+.field-label {
+  font-size: 0.79rem;
+  font-weight: 600;
+  color: #3a4657;
+}
+
+.field .owner-picker label {
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
+}
+
+.field .owner-picker input[type="checkbox"] {
+  width: 19px;
+  height: 19px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+}
+
+.sidebar-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.sidebar-actions .btn-sidebar {
+  padding-left: 0.4rem;
+  padding-right: 0.4rem;
+  font-size: 0.76rem;
+  gap: 0.35rem;
+  white-space: nowrap;
+}
+
+.toast {
+  pointer-events: none;
+}

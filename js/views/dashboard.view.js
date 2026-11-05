@@ -13,6 +13,7 @@ App.Views.dashboard = {
     const memberCounts = App.Services.members.counts();
     const upcomingEvents = App.Services.events.upcoming(5);
     const attendanceMonth = App.Services.attendance.totalPresentInMonth(currentMonth);
+    const attendanceTotals = App.Services.attendance.totals(App.Services.attendance.records());
     const ministries = App.Repositories.ministries.all().length;
     const incomeMonth = App.Services.donations.totalsForMonth(currentMonth);
     const hour = new Date().getHours();
@@ -36,7 +37,7 @@ App.Views.dashboard = {
       {
         label: 'Asistencias del mes',
         value: attendanceMonth,
-        foot: `presencias en ${App.Utils.monthLabel(currentMonth)}`,
+        foot: `${attendanceTotals.present} registradas en total · ${attendanceTotals.events} listas`,
         icon: 'attendance',
         tone: 'green'
       },

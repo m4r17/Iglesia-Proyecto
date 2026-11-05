@@ -9,7 +9,8 @@ App.Router = (function () {
     '/comunicados': { view: App.Views.announcements, module: 'announcements' },
     '/donaciones': { view: App.Views.donations, module: 'donations' },
     '/reportes': { view: App.Views.reports, module: 'reports' },
-    '/configuracion': { view: App.Views.settings, module: 'settings' }
+    '/configuracion': { view: App.Views.settings, module: 'settings' },
+    '/usuarios': { view: App.Views.users, module: 'users' }
   };
 
   function currentPath() {

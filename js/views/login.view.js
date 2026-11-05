@@ -125,32 +125,59 @@ App.Views.login = {
 
     document.getElementById('forgot-btn').addEventListener('click', () => {
       App.UI.modal({
-        title: 'Restablecer contraseña',
+        title: 'Recuperar contraseña',
+        submitLabel: 'Enviar código',
         formHtml: `
-          <p class="muted">Ingresa el correo registrado y define una nueva contraseña. En este prototipo el cambio se aplica directamente.</p>
+          <p class="muted">Ingresa el correo registrado. Se generará un código de verificación para restablecer la contraseña.</p>
           <div class="field">
             <label for="recover-email">Correo registrado</label>
-            <input type="email" id="recover-email" name="correo" placeholder="correo@iglesia.com" required>
+            <input type="email" id="recover-email" name="correo" placeholder="correo@iglesia.com" value="${App.Utils.escapeHtml(emailInput.value)}" required>
+          </div>
+        `,
+        onSubmit(data) {
+          const result = App.Auth.requestRecovery(data.correo);
+          window.setTimeout(() => openResetForm(result), 0);
+        }
+      });
+    });
+
+    function openResetForm(result) {
+      const escape = App.Utils.escapeHtml;
+
+      App.UI.modal({
+        title: 'Restablecer contraseña',
+        submitLabel: 'Restablecer contraseña',
+        formHtml: `
+          <p class="inline-note inline-note-soft">
+            Código enviado a <strong>${escape(result.correo)}</strong>. Mientras no exista un servidor de correo, el código se muestra aquí:
+            <strong class="recovery-code">${escape(result.code)}</strong>
+            Vence en ${escape(String(result.minutes))} minutos.
+          </p>
+          <input type="hidden" name="correo" value="${escape(result.correo)}">
+          <div class="field">
+            <label for="recover-code">Código de verificación</label>
+            <input type="text" id="recover-code" name="codigo" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" placeholder="000000" required>
           </div>
           <div class="field">
             <label for="recover-password">Nueva contraseña</label>
-            <input type="password" id="recover-password" name="password" minlength="6" required>
+            <input type="password" id="recover-password" name="password" minlength="6" autocomplete="new-password" required>
           </div>
           <div class="field">
             <label for="recover-confirm">Confirmar contraseña</label>
-            <input type="password" id="recover-confirm" name="confirm" minlength="6" required>
+            <input type="password" id="recover-confirm" name="confirm" minlength="6" autocomplete="new-password" required>
           </div>
         `,
-        submitLabel: 'Restablecer contraseña',
         onSubmit(data) {
           if (data.password !== data.confirm) {
             throw new Error('Las contraseñas no coinciden.');
           }
 
-          App.Auth.restorePassword(data.correo, data.password);
+          App.Auth.restorePassword(data.correo, data.codigo, data.password);
+          emailInput.value = data.correo;
+          passwordInput.value = '';
           App.UI.toast('Contraseña actualizada. Ya puedes iniciar sesión.');
         }
       });
-    });
+    }
   }
 };

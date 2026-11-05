@@ -16,31 +16,32 @@ App.Config = {
   storagePrefix: 'iglesia.casaDeFe.',
   seedVersion: '2026.11.2',
   toastDuration: 3200,
+  recoveryCodeMinutes: 15,
   roles: {
     administrador: {
       label: 'Administrador',
-      modules: ['dashboard', 'members', 'attendance', 'events', 'ministries', 'announcements', 'donations', 'reports', 'settings'],
-      manage: ['announcements', 'ministries']
+      modules: ['dashboard', 'members', 'attendance', 'events', 'ministries', 'announcements', 'donations', 'reports', 'settings', 'users'],
+      manage: ['members', 'attendance', 'events', 'ministries', 'announcements', 'donations', 'settings', 'users']
     },
     pastor: {
       label: 'Pastor',
       modules: ['dashboard', 'members', 'attendance', 'events', 'ministries', 'announcements', 'donations', 'reports', 'settings'],
-      manage: ['announcements', 'ministries']
+      manage: ['members', 'attendance', 'events', 'ministries', 'announcements', 'settings']
     },
     secretario: {
       label: 'Secretario',
       modules: ['dashboard', 'members', 'attendance', 'events', 'ministries', 'announcements', 'reports', 'settings'],
-      manage: ['announcements', 'ministries']
+      manage: ['members', 'attendance', 'events', 'ministries', 'announcements', 'settings']
     },
     tesorero: {
       label: 'Tesorero',
       modules: ['dashboard', 'donations', 'announcements', 'reports'],
-      manage: []
+      manage: ['donations']
     },
     coordinador: {
       label: 'Coordinador',
       modules: ['dashboard', 'members', 'attendance', 'events', 'ministries', 'announcements', 'reports'],
-      manage: ['ministries']
+      manage: ['attendance', 'events', 'ministries']
     }
   }
 };

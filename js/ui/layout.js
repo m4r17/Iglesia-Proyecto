@@ -8,7 +8,8 @@ App.Layout = (function () {
     { path: '/comunicados', label: 'Comunicados', icon: 'megaphone', module: 'announcements', group: 'Comunicación' },
     { path: '/donaciones', label: 'Donaciones', icon: 'donations', module: 'donations', group: 'Finanzas' },
     { path: '/reportes', label: 'Reportes', icon: 'chart', module: 'reports', group: 'Análisis' },
-    { path: '/configuracion', label: 'Configuración', icon: 'settings', module: 'settings', group: 'Sistema' }
+    { path: '/configuracion', label: 'Configuración', icon: 'settings', module: 'settings', group: 'Sistema' },
+    { path: '/usuarios', label: 'Usuarios', icon: 'usersGroup', module: 'users', group: 'Sistema' }
   ];
 
   function shell(activePath, title) {
@@ -57,10 +58,16 @@ App.Layout = (function () {
                 <span>${App.Utils.escapeHtml(App.Auth.roleLabel(user.rol))}</span>
               </div>
             </div>
-            <button type="button" class="btn btn-sidebar" id="logout-btn">
-              ${App.Icons.logout()}
-              Cerrar sesión
-            </button>
+            <div class="sidebar-actions">
+              <button type="button" class="btn btn-sidebar" id="password-btn" title="Cambiar contraseña">
+                ${App.Icons.lock()}
+                Contraseña
+              </button>
+              <button type="button" class="btn btn-sidebar" id="logout-btn">
+                ${App.Icons.logout()}
+                Cerrar sesión
+              </button>
+            </div>
           </div>
         </aside>
 
@@ -100,6 +107,32 @@ App.Layout = (function () {
     });
 
     overlay.addEventListener('click', closeSidebar);
+
+    document.getElementById('password-btn').addEventListener('click', () => {
+      closeSidebar();
+      App.UI.modal({
+        title: 'Cambiar contraseña',
+        submitLabel: 'Actualizar contraseña',
+        formHtml: `
+          <div class="field">
+            <label for="own-current">Contraseña actual</label>
+            <input type="password" id="own-current" name="actual" autocomplete="current-password" required>
+          </div>
+          <div class="field">
+            <label for="own-password">Nueva contraseña</label>
+            <input type="password" id="own-password" name="password" minlength="6" autocomplete="new-password" required>
+          </div>
+          <div class="field">
+            <label for="own-confirm">Confirmar contraseña</label>
+            <input type="password" id="own-confirm" name="confirm" minlength="6" autocomplete="new-password" required>
+          </div>
+        `,
+        onSubmit(data) {
+          App.Services.users.changePassword(user.id, data.actual, data.password, data.confirm);
+          App.UI.toast('Contraseña actualizada.');
+        }
+      });
+    });
 
     document.getElementById('logout-btn').addEventListener('click', () => {
       App.Auth.logout();
