@@ -1,0 +1,10 @@
+Una página web para una iglesia que necesita resguardar su información, ya que muchos de sus textos y libros están desintegrándose. Además, la página cubre la necesidad de modernización de la gestión y administración de la información de la iglesia.
+
+El nombre de la iglesia podría ser provisional, el logo también, ya que no se especificó.
+
+Tecnologías: 
+
+- Página HTML + CSS + JS (Vanilla)
+- Arquitectura en capas
+
+La integración de la base de datos lo pospondré, aun no se ha determinado.
